@@ -1,0 +1,11 @@
+.wrap { min-height: 100vh; display:grid; place-items:center; padding:16px; }
+.grid { width: 100%; max-width: 1120px; display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
+.section {}
+.roleGrid { display:grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 520px){ .roleGrid { grid-template-columns: repeat(3, 1fr); } }
+.roleItem { display:flex; gap:10px; border:1px solid var(--border); border-radius:12px; padding:12px; align-items:flex-start; cursor:pointer; }
+.roleItemActive { border-color: var(--primary); }
+.small { font-size:12px; color:var(--muted); }
+.separator { display:flex; align-items:center; gap:12px; }
+.separatorLine { flex:1; height:1px; background: var(--border); }
