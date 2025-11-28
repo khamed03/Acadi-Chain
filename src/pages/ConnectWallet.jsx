@@ -29,6 +29,8 @@ export default function ConnectWallet() {
     }
   }
 
+  // helloooooo
+
   return (
     <div style={{ maxWidth:640, margin:"40px auto", display:"grid", gap:16 }}>
       <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Connect your wallet</h1>
