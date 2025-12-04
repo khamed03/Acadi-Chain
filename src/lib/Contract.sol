@@ -1,103 +1,142 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/**
+ * @title CertificateRegistry
+ * @dev This contract stores on‑chain certificates that are identified by a
+ * unique special ID. Each certificate records both the issuer and the
+ * recipient (student) by their wallet addresses rather than using string
+ * identifiers. It also persists human‑readable metadata about the issuer,
+ * student and course, along with optional expiry and revocation status.
+ */
 contract CertificateRegistry {
+    /// @dev Data structure representing a single certificate record.
     struct Certificate {
-        string specialId;    // unique certificate ID, e.g. "AC-1", "AC-2"
-        string issuerName;
-        string studentName;
-        string studentId;    // e.g. "202100123"
-        string courseName;
-        uint64 expiry;       // unix timestamp; 0 => no expiry
-        uint64 issuedAt;     // block timestamp at issuance
-        bool revoked;
-        bool exists;
+        string specialId;     // Unique certificate ID (e.g. "AC-1", "AC-2").
+        string issuerName;    // Human‑readable name of the issuing institution.
+        address issuer;       // Wallet address of the issuer who created the certificate.
+        string studentName;   // Human‑readable name of the student.
+        address student;      // Wallet address of the student.
+        string courseName;    // Name of the course or credential.
+        uint64 expiry;        // Unix timestamp when certificate expires; 0 means no expiry.
+        uint64 issuedAt;      // Block timestamp when certificate was issued.
+        bool revoked;         // Whether the issuer has revoked the certificate.
+        bool exists;          // Internal flag indicating the record has been created.
     }
 
+    // Storage of all certificates indexed by the keccak256 hash of their specialId.
     mapping(bytes32 => Certificate) private _certs;
-    mapping(bytes32 => string[])   private _byStudentId; // hash(studentId) => list of specialId
-    mapping(bytes32 => string[])   private _byCourse;    // hash(courseName) => list of specialId
 
+    // Mapping from student address to list of certificate IDs (specialId) for easy lookup.
+    mapping(address => string[]) private _byStudent;
+
+    // Optional index: mapping from hashed course name to list of certificate IDs.
+    mapping(bytes32 => string[]) private _byCourse;
+
+    /// Emitted when a new certificate is issued.
     event CertificateIssued(
         string specialId,
+        address issuer,
         string issuerName,
+        address student,
         string studentName,
-        string studentId,
         string courseName,
         uint64 expiry
     );
 
+    /// Emitted when a certificate is revoked by its issuer.
     event CertificateRevoked(
         string specialId,
-        string issuerName
+        address issuer
     );
 
+    /// Error thrown when attempting to create a certificate with a specialId that already exists.
     error CertificateAlreadyExists(string specialId);
+
+    /// Error thrown when attempting to reference a certificate that does not exist.
     error CertificateNotFound(string specialId);
-    error StudentIdMismatch(string expected, string actual);
 
-    uint256 private _counter; // used to generate unique IDs
+    /// Error thrown when the provided student address does not match the stored address.
+    error StudentMismatch(address expected, address actual);
 
-    // ------------------------------------------------
-    // ISSUE
-    // ------------------------------------------------
+    // Counter used to generate unique special IDs in the format "AC-<N>".
+    uint256 private _counter;
 
+    /**
+     * @notice Issue a new certificate for a student.
+     * @param issuerName Human‑readable name of the issuing institution.
+     * @param studentName Human‑readable name of the student.
+     * @param student Wallet address of the student receiving the certificate.
+     * @param courseName Name of the course or credential being issued.
+     * @param expiry Optional expiry timestamp; set to 0 for no expiry.
+     * @return specialId The newly generated unique certificate ID.
+     */
     function issueCertificate(
         string calldata issuerName,
         string calldata studentName,
-        string calldata studentId,
+        address student,
         string calldata courseName,
         uint64 expiry
     ) external returns (string memory specialId) {
+        // Increment the counter to create a new ID each time.
         _counter++;
         specialId = _generateId(_counter);
 
         bytes32 key = _toKey(specialId);
         if (_certs[key].exists) revert CertificateAlreadyExists(specialId);
 
-        _certs[key] = Certificate({
-            specialId:  specialId,
+        // Create the certificate record in memory first.
+        Certificate memory cert = Certificate({
+            specialId: specialId,
             issuerName: issuerName,
+            issuer: msg.sender,
             studentName: studentName,
-            studentId:  studentId,
+            student: student,
             courseName: courseName,
-            expiry:     expiry,
-            issuedAt:   uint64(block.timestamp),
-            revoked:    false,
-            exists:     true
+            expiry: expiry,
+            issuedAt: uint64(block.timestamp),
+            revoked: false,
+            exists: true
         });
 
-        _byStudentId[_toKey(studentId)].push(specialId);
+        // Persist to storage.
+        _certs[key] = cert;
+        // Index by student address.
+        _byStudent[student].push(specialId);
+        // Index by course name using its hash.
         _byCourse[_toKey(courseName)].push(specialId);
 
         emit CertificateIssued(
             specialId,
+            cert.issuer,
             issuerName,
+            student,
             studentName,
-            studentId,
             courseName,
             expiry
         );
     }
 
-    // ------------------------------------------------
-    // READ: Single certificate (struct)
-    // ------------------------------------------------
-
+    /**
+     * @notice Retrieve a certificate by its special ID.
+     * @param specialId The unique ID of the certificate to retrieve.
+     * @return Certificate struct containing the certificate details.
+     */
     function getCertificate(
         string calldata specialId
     ) public view returns (Certificate memory) {
         return _mustGet(specialId);
     }
 
-    // ------------------------------------------------
-    // READ: All certificates for a student
-    // ------------------------------------------------
-
+    /**
+     * @notice List all certificates issued to a particular student address.
+     * @param student The wallet address of the student.
+     * @return An array of Certificate structs.
+     */
     function listCertificatesByStudent(
-        string calldata studentId
+        address student
     ) external view returns (Certificate[] memory) {
-        string[] storage ids = _byStudentId[_toKey(studentId)];
+        string[] storage ids = _byStudent[student];
         uint256 len = ids.length;
 
         Certificate[] memory result = new Certificate[](len);
@@ -107,10 +146,12 @@ contract CertificateRegistry {
         return result;
     }
 
-    // ------------------------------------------------
-    // VERIFY
-    // ------------------------------------------------
-
+    /**
+     * @notice Verify whether a certificate exists, is not revoked and not expired.
+     * @param specialId The unique ID of the certificate to verify.
+     * @return isValid True if the certificate is valid.
+     * @return reason Reason when invalid: "NOT_FOUND", "REVOKED", "EXPIRED" or "" (valid).
+     */
     function verify(
         string calldata specialId
     ) external view returns (bool isValid, string memory reason) {
@@ -123,28 +164,32 @@ contract CertificateRegistry {
         return (true, "");
     }
 
-    // ------------------------------------------------
-    // REVOKE (student-safe)
-    // ------------------------------------------------
-
+    /**
+     * @notice Revoke a certificate ensuring the provided student address matches the stored record.
+     * @param student The student wallet address expected to own the certificate.
+     * @param specialId The unique ID of the certificate to revoke.
+     */
     function revokeStudentCertificate(
-        string calldata studentId,
+        address student,
         string calldata specialId
     ) external {
         Certificate storage c = _mustGetStorage(specialId);
-        if (keccak256(bytes(c.studentId)) != keccak256(bytes(studentId))) {
-            revert StudentIdMismatch(c.studentId, studentId);
+        if (c.student != student) {
+            revert StudentMismatch(c.student, student);
         }
         if (!c.revoked) {
             c.revoked = true;
-            emit CertificateRevoked(specialId, c.issuerName);
+            emit CertificateRevoked(specialId, c.issuer);
         }
     }
 
     // ------------------------------------------------
-    // INTERNAL HELPERS
+    // Internal helper functions
     // ------------------------------------------------
 
+    /**
+     * @dev Retrieve a certificate from storage. Reverts if it does not exist.
+     */
     function _mustGet(
         string memory specialId
     ) internal view returns (Certificate memory) {
@@ -152,6 +197,10 @@ contract CertificateRegistry {
         return c;
     }
 
+    /**
+     * @dev Retrieve a certificate from storage with a mutable reference.
+     * Reverts if it does not exist.
+     */
     function _mustGetStorage(
         string memory specialId
     ) internal view returns (Certificate storage) {
@@ -161,12 +210,19 @@ contract CertificateRegistry {
         return c;
     }
 
+    /**
+     * @dev Convert an arbitrary string to a bytes32 key for indexing.
+     */
     function _toKey(
         string memory s
     ) internal pure returns (bytes32) {
         return keccak256(bytes(s));
     }
 
+    /**
+     * @dev Generate a human‑friendly certificate ID given a counter.
+     * The format is "AC-<number>" where <number> is a decimal representation.
+     */
     function _generateId(
         uint256 num
     ) internal pure returns (string memory) {
@@ -186,24 +242,5 @@ contract CertificateRegistry {
             num /= 10;
         }
         return string(abi.encodePacked("AC-", string(buffer)));
-    }
-
-    function _expiryString(uint64 expiry) internal pure returns (string memory) {
-        if (expiry == 0) return "NO_EXPIRY";
-        uint256 num = uint256(expiry);
-        if (num == 0) return "0";
-        uint256 temp = num;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (num != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(num % 10)));
-            num /= 10;
-        }
-        return string(buffer);
     }
 }
