@@ -1,91 +1,110 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// Added from your edited version
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 /**
- * @title CertificateRegistry
- * @dev This contract stores on‑chain certificates that are identified by a
- * unique special ID. Each certificate records both the issuer and the
- * recipient (student) by their wallet addresses rather than using string
- * identifiers. It also persists human‑readable metadata about the issuer,
- * student and course, along with optional expiry and revocation status.
+ * @title CertificateRegistry (Merged Version)
+ * @notice Combines:
+ *  - Original advanced registry (specialId, expiry, revoke, indexing)
+ *  - Modified version (CID/IPFS metadata, name/degree/major/year, verification)
+ *  - Adds onlyOwner issuer/verifier control
  */
-contract CertificateRegistry {
-    /// @dev Data structure representing a single certificate record.
+contract CertificateRegistry is Ownable, ReentrancyGuard {
+
+    // -----------------------------------------------------
+    // Struct Definition (Merged)
+    // -----------------------------------------------------
     struct Certificate {
-        string specialId;     // Unique certificate ID (e.g. "AC-1", "AC-2").
-        string issuerName;    // Human‑readable name of the issuing institution.
-        address issuer;       // Wallet address of the issuer who created the certificate.
-        string studentName;   // Human‑readable name of the student.
-        address student;      // Wallet address of the student.
-        string courseName;    // Name of the course or credential.
-        uint64 expiry;        // Unix timestamp when certificate expires; 0 means no expiry.
-        uint64 issuedAt;      // Block timestamp when certificate was issued.
-        bool revoked;         // Whether the issuer has revoked the certificate.
-        bool exists;          // Internal flag indicating the record has been created.
+        // From original
+        string specialId;
+        string issuerName;
+        address issuer;
+        string studentName;
+        address student;
+        string courseName;
+        uint64 expiry;
+        uint64 issuedAt;
+        bool revoked;
+        bool exists;
+
+        // From edited version
+        string cid;        // IPFS file
+        string degree;
+        string major;
+        string year;
+        bool valid;        // verified by admin
     }
 
-    // Storage of all certificates indexed by the keccak256 hash of their specialId.
+    // -----------------------------------------------------
+    // Storage
+    // -----------------------------------------------------
     mapping(bytes32 => Certificate) private _certs;
-
-    // Mapping from student address to list of certificate IDs (specialId) for easy lookup.
     mapping(address => string[]) private _byStudent;
-
-    // Optional index: mapping from hashed course name to list of certificate IDs.
     mapping(bytes32 => string[]) private _byCourse;
+    mapping(string => bool) private issuedCid; // prevent reissuing same CID
 
-    /// Emitted when a new certificate is issued.
+    uint256 private _counter;
+
+    // -----------------------------------------------------
+    // Events
+    // -----------------------------------------------------
     event CertificateIssued(
         string specialId,
-        address issuer,
-        string issuerName,
-        address student,
-        string studentName,
-        string courseName,
-        uint64 expiry
+        address indexed issuer,
+        string cid
     );
 
-    /// Emitted when a certificate is revoked by its issuer.
+    event CertificateVerified(
+        string specialId,
+        address verifier
+    );
+
     event CertificateRevoked(
         string specialId,
         address issuer
     );
 
-    /// Error thrown when attempting to create a certificate with a specialId that already exists.
-    error CertificateAlreadyExists(string specialId);
+    // -----------------------------------------------------
+    // Modifiers
+    // -----------------------------------------------------
+    modifier onlyIssuer() {
+        require(msg.sender == owner(), "Not authorized: issuer only");
+        _;
+    }
 
-    /// Error thrown when attempting to reference a certificate that does not exist.
-    error CertificateNotFound(string specialId);
+    modifier onlyVerifier() {
+        require(msg.sender == owner(), "Not authorized: verifier only");
+        _;
+    }
 
-    /// Error thrown when the provided student address does not match the stored address.
-    error StudentMismatch(address expected, address actual);
-
-    // Counter used to generate unique special IDs in the format "AC-<N>".
-    uint256 private _counter;
-
-    /**
-     * @notice Issue a new certificate for a student.
-     * @param issuerName Human‑readable name of the issuing institution.
-     * @param studentName Human‑readable name of the student.
-     * @param student Wallet address of the student receiving the certificate.
-     * @param courseName Name of the course or credential being issued.
-     * @param expiry Optional expiry timestamp; set to 0 for no expiry.
-     * @return specialId The newly generated unique certificate ID.
-     */
+    // -----------------------------------------------------
+    // Issue Certificate (Merged Function)
+    // -----------------------------------------------------
     function issueCertificate(
         string calldata issuerName,
         string calldata studentName,
         address student,
         string calldata courseName,
-        uint64 expiry
-    ) external returns (string memory specialId) {
-        // Increment the counter to create a new ID each time.
+        uint64 expiry,
+        string calldata cid,          // Added
+        string calldata degree,       // Added
+        string calldata major,        // Added
+        string calldata year          // Added
+    ) external onlyIssuer nonReentrant returns (string memory specialId) {
+
+        require(student != address(0), "Invalid student address");
+        require(bytes(cid).length != 0, "CID required");
+        require(!issuedCid[cid], "CID already issued");
+
         _counter++;
         specialId = _generateId(_counter);
 
         bytes32 key = _toKey(specialId);
-        if (_certs[key].exists) revert CertificateAlreadyExists(specialId);
+        require(!_certs[key].exists, "SpecialId already exists");
 
-        // Create the certificate record in memory first.
         Certificate memory cert = Certificate({
             specialId: specialId,
             issuerName: issuerName,
@@ -96,151 +115,130 @@ contract CertificateRegistry {
             expiry: expiry,
             issuedAt: uint64(block.timestamp),
             revoked: false,
-            exists: true
+            exists: true,
+            cid: cid,
+            degree: degree,
+            major: major,
+            year: year,
+            valid: false
         });
 
-        // Persist to storage.
         _certs[key] = cert;
-        // Index by student address.
         _byStudent[student].push(specialId);
-        // Index by course name using its hash.
         _byCourse[_toKey(courseName)].push(specialId);
+        issuedCid[cid] = true;
 
-        emit CertificateIssued(
-            specialId,
-            cert.issuer,
-            issuerName,
-            student,
-            studentName,
-            courseName,
-            expiry
-        );
+        emit CertificateIssued(specialId, msg.sender, cid);
     }
 
-    /**
-     * @notice Retrieve a certificate by its special ID.
-     * @param specialId The unique ID of the certificate to retrieve.
-     * @return Certificate struct containing the certificate details.
-     */
-    function getCertificate(
-        string calldata specialId
-    ) public view returns (Certificate memory) {
+    // -----------------------------------------------------
+    // Verification
+    // -----------------------------------------------------
+    function verifyCertificate(string memory specialId)
+        external
+        onlyVerifier
+    {
+        bytes32 key = _toKey(specialId);
+        Certificate storage c = _certs[key];
+        require(c.exists, "Certificate not found");
+        require(!c.valid, "Already verified");
+
+        c.valid = true;
+        emit CertificateVerified(specialId, msg.sender);
+    }
+
+    // -----------------------------------------------------
+    // Get Certificate
+    // -----------------------------------------------------
+    function getCertificate(string calldata specialId)
+        external
+        view
+        returns (Certificate memory)
+    {
         return _mustGet(specialId);
     }
 
-    /**
-     * @notice List all certificates issued to a particular student address.
-     * @param student The wallet address of the student.
-     * @return An array of Certificate structs.
-     */
-    function listCertificatesByStudent(
-        address student
-    ) external view returns (Certificate[] memory) {
+    // -----------------------------------------------------
+    // List certificates for a student
+    // -----------------------------------------------------
+    function listCertificatesByStudent(address student)
+        external
+        view
+        returns (Certificate[] memory)
+    {
         string[] storage ids = _byStudent[student];
-        uint256 len = ids.length;
+        Certificate[] memory arr = new Certificate[](ids.length);
 
-        Certificate[] memory result = new Certificate[](len);
-        for (uint256 i = 0; i < len; i++) {
-            result[i] = _mustGet(ids[i]);
+        for (uint256 i = 0; i < ids.length; i++) {
+            arr[i] = _mustGet(ids[i]);
         }
-        return result;
+        return arr;
     }
 
-    /**
-     * @notice Verify whether a certificate exists, is not revoked and not expired.
-     * @param specialId The unique ID of the certificate to verify.
-     * @return isValid True if the certificate is valid.
-     * @return reason Reason when invalid: "NOT_FOUND", "REVOKED", "EXPIRED" or "" (valid).
-     */
-    function verify(
-        string calldata specialId
-    ) external view returns (bool isValid, string memory reason) {
-        Certificate memory c = _certs[_toKey(specialId)];
-        if (!c.exists) return (false, "NOT_FOUND");
-        if (c.revoked) return (false, "REVOKED");
-        if (c.expiry != 0 && block.timestamp > c.expiry) {
-            return (false, "EXPIRED");
-        }
-        return (true, "");
-    }
-
-    /**
-     * @notice Revoke a certificate ensuring the provided student address matches the stored record.
-     * @param student The student wallet address expected to own the certificate.
-     * @param specialId The unique ID of the certificate to revoke.
-     */
+    // -----------------------------------------------------
+    // Revocation (original functionality kept)
+    // -----------------------------------------------------
     function revokeStudentCertificate(
         address student,
         string calldata specialId
     ) external {
         Certificate storage c = _mustGetStorage(specialId);
-        if (c.student != student) {
-            revert StudentMismatch(c.student, student);
-        }
+        require(c.student == student, "Student mismatch");
+
         if (!c.revoked) {
             c.revoked = true;
             emit CertificateRevoked(specialId, c.issuer);
         }
     }
 
-    // ------------------------------------------------
-    // Internal helper functions
-    // ------------------------------------------------
-
-    /**
-     * @dev Retrieve a certificate from storage. Reverts if it does not exist.
-     */
-    function _mustGet(
-        string memory specialId
-    ) internal view returns (Certificate memory) {
+    // -----------------------------------------------------
+    // Internal helpers
+    // -----------------------------------------------------
+    function _mustGet(string memory specialId)
+        internal
+        view
+        returns (Certificate memory)
+    {
         Certificate storage c = _mustGetStorage(specialId);
         return c;
     }
 
-    /**
-     * @dev Retrieve a certificate from storage with a mutable reference.
-     * Reverts if it does not exist.
-     */
-    function _mustGetStorage(
-        string memory specialId
-    ) internal view returns (Certificate storage) {
+    function _mustGetStorage(string memory specialId)
+        internal
+        view
+        returns (Certificate storage)
+    {
         bytes32 key = _toKey(specialId);
         Certificate storage c = _certs[key];
-        if (!c.exists) revert CertificateNotFound(specialId);
+        require(c.exists, "Certificate does not exist");
         return c;
     }
 
-    /**
-     * @dev Convert an arbitrary string to a bytes32 key for indexing.
-     */
-    function _toKey(
-        string memory s
-    ) internal pure returns (bytes32) {
+    function _toKey(string memory s) internal pure returns (bytes32) {
         return keccak256(bytes(s));
     }
 
-    /**
-     * @dev Generate a human‑friendly certificate ID given a counter.
-     * The format is "AC-<number>" where <number> is a decimal representation.
-     */
-    function _generateId(
-        uint256 num
-    ) internal pure returns (string memory) {
-        if (num == 0) {
-            return "AC-0";
-        }
+    function _generateId(uint256 num)
+        internal
+        pure
+        returns (string memory)
+    {
+        if (num == 0) return "AC-0";
+
         uint256 temp = num;
-        uint256 digits;
+        uint256 digits = 0;
         while (temp != 0) {
             digits++;
             temp /= 10;
         }
-        bytes memory buffer = new bytes(digits);
+
+        bytes memory buf = new bytes(digits);
         while (num != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(num % 10)));
+            digits--;
+            buf[digits] = bytes1(uint8(48 + num % 10));
             num /= 10;
         }
-        return string(abi.encodePacked("AC-", string(buffer)));
+
+        return string(abi.encodePacked("AC-", string(buf)));
     }
 }

@@ -140,3 +140,30 @@ export default function Dashboard() {
     </AuthGuard>
   );
 }
+
+
+// import { useEffect } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { useAuth } from "../store/auth.js";
+// import AuthGuard from "../components/AuthGuard.jsx";
+
+// export default function Dashboard() {
+//   const { role, hydrated } = useAuth();
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     if (!hydrated) return;
+//     if (role === "issuer") navigate("/dashboard/issuer", { replace: true });
+//     else if (role === "verifier") navigate("/dashboard/verifier", { replace: true });
+//     else if (role === "student") navigate("/dashboard/student", { replace: true });
+//     else navigate("/", { replace: true });
+//   }, [hydrated, role, navigate]);
+
+//   return (
+//     <AuthGuard>
+//       <div style={{ padding: 24, color: "var(--muted)" }}>
+//         Loading dashboard…
+//       </div>
+//     </AuthGuard>
+//   );
+// }
