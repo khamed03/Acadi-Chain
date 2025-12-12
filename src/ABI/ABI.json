@@ -1,315 +1,159 @@
 [
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			}
-		],
-		"name": "CertificateAlreadyExists",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			}
-		],
-		"name": "CertificateNotFound",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "expected",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "actual",
-				"type": "string"
-			}
-		],
-		"name": "StudentIdMismatch",
-		"type": "error"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "issuerName",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "studentName",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "studentId",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "courseName",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint64",
-				"name": "expiry",
-				"type": "uint64"
-			}
-		],
-		"name": "CertificateIssued",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "issuerName",
-				"type": "string"
-			}
-		],
-		"name": "CertificateRevoked",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "issuerName",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "studentName",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "studentId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "courseName",
-				"type": "string"
-			},
-			{
-				"internalType": "uint64",
-				"name": "expiry",
-				"type": "uint64"
-			}
-		],
-		"name": "issueCertificate",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "studentId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			}
-		],
-		"name": "revokeStudentCertificate",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			}
-		],
-		"name": "getCertificate",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "string",
-						"name": "specialId",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "issuerName",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "studentName",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "studentId",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "courseName",
-						"type": "string"
-					},
-					{
-						"internalType": "uint64",
-						"name": "expiry",
-						"type": "uint64"
-					},
-					{
-						"internalType": "uint64",
-						"name": "issuedAt",
-						"type": "uint64"
-					},
-					{
-						"internalType": "bool",
-						"name": "revoked",
-						"type": "bool"
-					},
-					{
-						"internalType": "bool",
-						"name": "exists",
-						"type": "bool"
-					}
-				],
-				"internalType": "struct CertificateRegistry.Certificate",
-				"name": "",
-				"type": "tuple"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "studentId",
-				"type": "string"
-			}
-		],
-		"name": "listCertificatesByStudent",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "string",
-						"name": "specialId",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "issuerName",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "studentName",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "studentId",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "courseName",
-						"type": "string"
-					},
-					{
-						"internalType": "uint64",
-						"name": "expiry",
-						"type": "uint64"
-					},
-					{
-						"internalType": "uint64",
-						"name": "issuedAt",
-						"type": "uint64"
-					},
-					{
-						"internalType": "bool",
-						"name": "revoked",
-						"type": "bool"
-					},
-					{
-						"internalType": "bool",
-						"name": "exists",
-						"type": "bool"
-					}
-				],
-				"internalType": "struct CertificateRegistry.Certificate[]",
-				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "specialId",
-				"type": "string"
-			}
-		],
-		"name": "verify",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "isValid",
-				"type": "bool"
-			},
-			{
-				"internalType": "string",
-				"name": "reason",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "student",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "degree",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "major",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "year",
+        "type": "string"
+      }
+    ],
+    "name": "issueCertificate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      }
+    ],
+    "name": "verifyCertificate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      }
+    ],
+    "name": "getCertificate",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      }
+    ],
+    "name": "isIssued",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "issuer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      }
+    ],
+    "name": "CertificateIssued",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "verifier",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      }
+    ],
+    "name": "CertificateVerified",
+    "type": "event"
+  }
 ]
