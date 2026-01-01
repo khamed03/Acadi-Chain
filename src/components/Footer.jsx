@@ -1,4 +1,7 @@
-import s from "../styles/layout.module.css";
-export default function Footer(){
-  return <footer className={`container ${s.footer}`}>© {new Date().getFullYear()} Acadi-chain — demo frontend</footer>;
+export default function Footer() {
+  return (
+    <div style={{ padding: 18, borderTop: "1px solid var(--border)", color: "var(--muted)" }}>
+      <div className="container">© {new Date().getFullYear()} Acadi-Chain</div>
+    </div>
+  );
 }

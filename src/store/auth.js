@@ -1,17 +1,14 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
-export const useAuth = create(
-  persist(
-    (set) => ({
-      token: null,
-      role: null,
-      address: null,
-      hydrated: false,
-      login: ({ token, role, address }) => set({ token, role, address }),
-      logout: () => set({ token: null, role: null, address: null }),
-      setHydrated: (b) => set({ hydrated: b }),
+export const useAuth = create((set) => ({
+  isAuthed: false,
+  role: "guest",          // guest | admin | issuer | student | verifier
+  studentId: "",          // used by student
+  setAuth: ({ role, studentId }) =>
+    set({
+      isAuthed: role !== "guest",
+      role,
+      studentId: studentId || ""
     }),
-    { name: "acadi-auth" }
-  )
-);
+  logout: () => set({ isAuthed: false, role: "guest", studentId: "" })
+}));

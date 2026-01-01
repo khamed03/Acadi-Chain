@@ -1,6 +1,8 @@
-import { useAuth } from "../store/auth.js";
-export default function RoleGate({ allow, children }){
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../store/auth";
+
+export default function RoleGate({ allow, children }) {
   const { role } = useAuth();
-  if (!role || !allow.includes(role)) return <div style={{ fontSize:14, color:"var(--muted)"}}>Access restricted for role: {role || "unknown"}</div>;
-  return <>{children}</>;
+  if (!allow.includes(role)) return <Navigate to="/dashboard" replace />;
+  return children;
 }
