@@ -11,7 +11,7 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import VerifyDashboard from "./pages/verifier/VerifyDashboard";
 import GuestVerify from "./pages/guest/GuestVerify";
 
-export default function App() {
+export default function App() { 
   return (
     <>
       <TopNav />
