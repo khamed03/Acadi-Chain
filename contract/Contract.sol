@@ -281,3 +281,5 @@ contract CertificateRegistry is AccessControl {
         return string(abi.encodePacked("AC-", string(buffer)));
     }
 }
+
+
