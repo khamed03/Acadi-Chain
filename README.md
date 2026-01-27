@@ -43,12 +43,19 @@ The project is structured into the following main components:
 
 ## 📂 Repository Structure
 Acadi-Chain/
+
 ├── src/ # Frontend React + Vite application
+
 ├── store/ # Zustand store for auth state
+
 ├── package.json # Project dependencies
+
 ├── vite.config.js # Vite config
+
 ├── index.html # App entry HTML
+
 ├── .gitignore
+
 └── README.md
 
 
