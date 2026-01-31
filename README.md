@@ -1,4 +1,4 @@
-# 🇯🇴 Acadi-Chain
+# Acadi-Chain
 
 **Blockchain-based Academic Certificate Verification System**  
 A decentralized application (DApp) that enables trusted issuance and verification of academic certificates using Ethereum smart contracts and IPFS for off-chain storage.
