@@ -67,29 +67,29 @@ export default function Issuer() {
   });
 
   const [status, setStatus] = useState("");
-  const [studentReg, setStudentReg] = useState("");
-  const [studentRegStatus, setStudentRegStatus] = useState("");
+  // const [studentReg, setStudentReg] = useState("");
+  // const [studentRegStatus, setStudentRegStatus] = useState("");
 
   const [expiryError, setExpiryError] = useState("");
 
-  async function onAddStudent() {
-    setStudentRegStatus("");
-    if (!token) {
-      setStudentRegStatus("Error: Not authenticated.");
-      return;
-    }
-    if (!isEthAddress(studentReg)) {
-      setStudentRegStatus("Error: Invalid student wallet address (must be 0x...).");
-      return;
-    }
-    try {
-      setStudentRegStatus("Opening MetaMask to add student role…");
-      const res = await addStudentWithMetaMask(studentReg.trim());
-      setStudentRegStatus(`Student registered on-chain ✅ tx: ${res.txHash}`);
-    } catch (err) {
-      setStudentRegStatus(`Error: ${err?.message || "Failed to add student."}`);
-    }
-  }
+  // async function onAddStudent() {
+  //   setStudentRegStatus("");
+  //   if (!token) {
+  //     setStudentRegStatus("Error: Not authenticated.");
+  //     return;
+  //   }
+  //   if (!isEthAddress(studentReg)) {
+  //     setStudentRegStatus("Error: Invalid student wallet address (must be 0x...).");
+  //     return;
+  //   }
+  //   try {
+  //     setStudentRegStatus("Opening MetaMask to add student role…");
+  //     const res = await addStudentWithMetaMask(studentReg.trim());
+  //     setStudentRegStatus(`Student registered on-chain ✅ tx: ${res.txHash}`);
+  //   } catch (err) {
+  //     setStudentRegStatus(`Error: ${err?.message || "Failed to add student."}`);
+  //   }
+  // }
 
   function onExpiryChange(e) {
     const raw = e.target.value;
@@ -180,7 +180,7 @@ export default function Issuer() {
         </h1>
 
         {/* Student invite / registration */}
-        <div
+        {/* <div
           style={{
             display: "grid",
             gap: 12,
@@ -211,7 +211,7 @@ export default function Issuer() {
               {studentRegStatus}
             </p>
           )}
-        </div>
+        </div> */}
 
         <form
           onSubmit={onSubmit}
